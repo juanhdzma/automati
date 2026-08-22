@@ -1,4 +1,4 @@
-# automati
+# Automati
 
 Self-hosted personal automation hub — scheduled jobs, integrations, and notifications in one place. FastAPI backend, Docker-ready, image published to GHCR on every push.
 

@@ -21,9 +21,12 @@ class Settings:
     # llamar el servicio), asi que en total responde en ~0.3s.
     request_timeout: float = 15.0
 
-    # SQLite de los jobs programados. En Docker apunta al volumen (/data); el
-    # default sirve para correrlo local sin configurar nada.
-    db_path: str = "automati.db"
+    # SQLite de los timers. El default apunta al volumen montado en el Dockerfile
+    # (/data, chowneado al usuario non-root del container) para que el container
+    # arranque solo con HA_URL y HOME_TOKEN, sin depender de que docker-compose.yml
+    # tambien recuerde setear DB_PATH. Corriendo local (no Docker) hay que pasar
+    # DB_PATH explicito porque /data no existe fuera del container.
+    db_path: str = "/data/automati.db"
 
 
 def load_settings() -> Settings:
@@ -38,5 +41,5 @@ def load_settings() -> Settings:
     return Settings(
         ha_url=url.rstrip("/"),
         ha_token=token,
-        db_path=os.getenv("DB_PATH", "automati.db"),
+        db_path=os.getenv("DB_PATH", "/data/automati.db"),
     )

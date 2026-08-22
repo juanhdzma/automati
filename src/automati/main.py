@@ -32,7 +32,7 @@ from .config import load_settings
 from .logic.smart_home.client import HomeAssistantClient
 from .logic.smart_home.schedule import runner
 from .logic.smart_home.store import TimerStore
-from .routers import smart_home
+from .routers import scriptable_ios, smart_home
 
 logging.basicConfig(
     level=logging.INFO,
@@ -76,6 +76,7 @@ app = FastAPI(
 )
 
 app.include_router(smart_home.router)
+app.include_router(scriptable_ios.router)
 
 
 @app.get("/health")

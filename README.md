@@ -11,6 +11,7 @@ Un endpoint que togglea la luz y el ventilador del cuarto vía Home Assistant.
 ```
 POST /smart-home/toggle?item=light|fan
 POST /smart-home/timer?item=light|fan&seconds=N    # prende ya, apaga solo en N segundos (1-86400)
+GET  /scriptable-ios/payday                        # proximo pago y dias que faltan
 GET  /health
 ```
 
@@ -19,6 +20,12 @@ Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez
 Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
 
 `/timer` no tiene forma de cancelarse por HTTP, a proposito: apagar es idempotente, asi que si apagas el device a mano antes de tiempo, el apagado programado no cambia nada cuando llega. No hay estado que romper por dejarlo correr de mas.
+
+## scriptable_ios
+
+No es una seccion de automatizaciones: no acciona nada, solo calcula y devuelve datos de solo lectura para que los pinte un widget de [Scriptable](https://scriptable.app) en iOS con su propio diseño. `smart_home/` automatiza; esto informa.
+
+`GET /scriptable-ios/payday` calcula el proximo pago: fijo el 24 de cada mes, corrido hacia atras (nunca hacia adelante) hasta el primer dia habil si el 24 cae en fin de semana o festivo colombiano. Los festivos salen de la libreria `holidays` (Ley Emiliani, sin red ni scraping) en vez de una pagina web, para que el calculo no dependa de que un sitio externo siga respondiendo o mantenga su HTML.
 
 ## El detalle que importa
 
@@ -39,6 +46,7 @@ src/automati/
   dependencies.py
   routers/
     smart_home.py            # HTTP: valida, formatea, mapea errores
+    scriptable_ios.py        # HTTP: datos de solo lectura para widgets
   logic/
     smart_home/
       client.py              # transporte contra la API de Home Assistant
@@ -46,13 +54,15 @@ src/automati/
       toggle.py              # prende/apaga un switch
       schedule.py            # timer: prende ya, apaga solo despues
       store.py               # persistencia de los timers en SQLite
+    scriptable_ios/
+      payday.py              # proximo pago, ajustado a dia habil
 tests/
 ```
 
 Dos reglas sostienen esto:
 
-- **Los routers no hablan con Home Assistant.** Validan, llaman a `logic/`, formatean. Toda la lógica vive de un solo lado.
-- **`logic/` se parte por sección de automatización.** Hoy solo `smart_home/`. Mañana un `iphone_widgets/` entra al lado, con su router, sin tocar nada de lo existente.
+- **Los routers no hablan con Home Assistant ni calculan nada.** Validan, llaman a `logic/`, formatean. Toda la lógica vive de un solo lado.
+- **`logic/` se parte por sección.** `smart_home/` automatiza, `scriptable_ios/` informa — no todo lo que hay aca es una automatizacion, y el nombre de la carpeta lo dice. Una seccion nueva entra al lado, con su router, sin tocar nada de lo existente.
 
 Cada módulo de `logic/` arranca con un docstring que explica qué automatiza y por qué hace lo que hace. El porqué de los workarounds no se deduce del código y se pierde si no está escrito.
 

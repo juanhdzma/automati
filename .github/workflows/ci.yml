@@ -19,21 +19,9 @@ jobs:
           python-version: '3.12'
           cache: pip
 
-      - name: Install python dev deps
-        if: hashFiles('backend/requirements-dev.txt') != ''
-        run: pip install -r backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
 
-      - name: Run pytest
-        if: hashFiles('backend/tests/**') != ''
-        run: python -m pytest backend/tests -q
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Run node tests
-        if: hashFiles('tests/frontend/*.test.mjs') != ''
-        run: node --test tests/frontend/*.test.mjs
+      - run: python -m pytest tests -q
 
   build:
     needs: test

@@ -1,31 +1,104 @@
-# macOS
-.DS_Store
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.eggs/
-build/
-dist/
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-error.log*
-
-# Env / secrets
+# ---- Secretos y config local ----
+# El HOME_TOKEN da control total sobre la casa: nunca entra al repo.
 .env
 .env.*
 !.env.example
+.ENV
+*.pem
+*.key
+secrets/
 
-# Editors
-.idea/
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# Test y type checking
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+*.cover
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.npm/
+
+# ---- Logs y runtime ----
+*.log
+logs/
+*.pid
+*.seed
+
+# ---- Bases de datos locales ----
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Docker ----
+docker-compose.override.yml
+
+# ---- Editores ----
 .vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.ropeproject/
+
+# ---- Sistema operativo ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---- Notebooks ----
+.ipynb_checkpoints/
+
+# ---- Varios ----
+.cache/
+tmp/

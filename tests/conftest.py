@@ -1,15 +1,13 @@
 import httpx
-import pytest
-
-from automati.logic.smart_home import availability
 
 
 class FakeClient:
     """Doble del HomeAssistantClient que registra la secuencia de llamadas.
 
     `states` es la cola de estados que devuelve `get_state`; el ultimo se repite.
-    `calls` guarda el orden real de las operaciones, que es lo que importa testear:
-    el reload de Tuya tiene que ir antes de la primera lectura.
+    `calls` guarda la secuencia real de operaciones, que es lo que se assertea:
+    que se lea el estado antes de actuar, y que a un device desconectado no se le
+    mande nada.
     """
 
     def __init__(
@@ -44,11 +42,3 @@ class FakeClient:
         self.calls.append(("reload", entry_id))
         if entry_id in self._failing_entries:
             raise httpx.HTTPError(f"reload de {entry_id} fallo")
-
-
-@pytest.fixture(autouse=True)
-def instant_retries(monkeypatch):
-    async def no_sleep(_seconds):
-        return None
-
-    monkeypatch.setattr(availability.asyncio, "sleep", no_sleep)

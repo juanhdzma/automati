@@ -9,11 +9,16 @@ Self-hosted personal automation hub — smart home devices, scheduled actions, a
 Un endpoint que togglea la luz y el ventilador del cuarto vía Home Assistant.
 
 ```
-POST /smart-home/toggle?item=light
-POST /smart-home/toggle?item=fan
+POST /smart-home/toggle?item=light|fan
+POST /smart-home/timer?item=light|fan&seconds=N    # prende ya, apaga solo en N segundos (1-86400)
+GET  /health
 ```
 
-Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto.
+Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez que el servicio esta corriendo.
+
+Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
+
+`/timer` no tiene forma de cancelarse por HTTP, a proposito: apagar es idempotente, asi que si apagas el device a mano antes de tiempo, el apagado programado no cambia nada cuando llega. No hay estado que romper por dejarlo correr de mas.
 
 ## El detalle que importa
 

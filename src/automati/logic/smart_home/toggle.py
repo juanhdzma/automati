@@ -72,18 +72,27 @@ class ToggleResult:
     state: str
 
 
-async def toggle(client: HomeAssistantClient, device: Device) -> ToggleResult:
+async def read_state(client: HomeAssistantClient, device: Device) -> str:
+    """Estado actual del device. Revienta si no esta conectado.
+
+    Cortar aca es el punto: si el device esta desconectado de la nube de Tuya,
+    Home Assistant acepta el comando con 200 y el aparato no hace nada.
+    """
     # Version con reload previo. Rompe el comando siguiente; ver el docstring.
     # state = await ensure_available(client, device.entity_id)
 
     state = (await client.get_state(device.entity_id)).get("state")
     if state in UNAVAILABLE_STATES:
         raise DeviceUnavailable(device.entity_id)
+    return state
 
-    # Cualquier estado que no sea "on" se trata como apagado. HA puede devolver
-    # otros valores en el medio de una transicion; ante la duda, prender.
-    turning_off = state == "on"
-    service = "turn_off" if turning_off else "turn_on"
+
+async def set_power(
+    client: HomeAssistantClient, device: Device, on: bool
+) -> ToggleResult:
+    """Prende o apaga sin importar como estaba. Idempotente."""
+    previous = await read_state(client, device)
+    service = "turn_on" if on else "turn_off"
     await client.call_service(
         SWITCH_DOMAIN, service, {"entity_id": device.entity_id}
     )
@@ -91,15 +100,23 @@ async def toggle(client: HomeAssistantClient, device: Device) -> ToggleResult:
     result = ToggleResult(
         entity_id=device.entity_id,
         label=device.label,
-        previous_state=state,
-        state="off" if turning_off else "on",
+        previous_state=previous,
+        state="on" if on else "off",
     )
     logger.info(
-        "Toggle aplicado",
+        "Switch aplicado",
         extra={
             "entity_id": result.entity_id,
+            "service": service,
             "previous_state": result.previous_state,
             "state": result.state,
         },
     )
     return result
+
+
+async def toggle(client: HomeAssistantClient, device: Device) -> ToggleResult:
+    # Cualquier estado que no sea "on" se trata como apagado. HA puede devolver
+    # otros valores en el medio de una transicion; ante la duda, prender.
+    state = await read_state(client, device)
+    return await set_power(client, device, on=state != "on")

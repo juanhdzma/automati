@@ -4,6 +4,10 @@ Monta un router por cada seccion de automatizaciones. Hoy solo `smart_home`; cua
 entre otra (widgets de iPhone, por ejemplo) se agrega su carpeta en `logic/`, su
 router en `routers/`, y una linea de `include_router` aca.
 
+El lifespan tambien levanta el loop que apaga los timers vencidos, y lo apaga
+limpio al cerrar. Vive aca y no dentro del router porque es un proceso de fondo
+del servicio entero, no algo que dispare un request.
+
 # Sin autenticacion, a proposito
 
 Este servicio corre en la LAN de casa y no se expone a internet. No tiene auth, ni
@@ -17,6 +21,7 @@ falta llegar desde afuera, la respuesta es una VPN (Tailscale, WireGuard), no
 abrirle un puerto al router. Ver la seccion "Seguridad" del README.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -25,6 +30,8 @@ from fastapi import FastAPI
 
 from .config import load_settings
 from .logic.smart_home.client import HomeAssistantClient
+from .logic.smart_home.schedule import runner
+from .logic.smart_home.store import TimerStore
 from .routers import smart_home
 
 logging.basicConfig(
@@ -39,12 +46,27 @@ async def lifespan(app: FastAPI):
     # container en el boot en vez de fallar en el primer toggle.
     settings = load_settings()
 
+    store = TimerStore(settings.db_path)
+
     # Un solo AsyncClient para todo el proceso: comparte el connection pool y evita
     # el handshake TCP en cada request contra Home Assistant.
     async with httpx.AsyncClient() as http:
+        client = HomeAssistantClient(settings, http)
         app.state.settings = settings
-        app.state.ha_client = HomeAssistantClient(settings, http)
-        yield
+        app.state.ha_client = client
+        app.state.timer_store = store
+
+        # El scheduler arranca aca y no antes: necesita el cliente HTTP vivo, y al
+        # colgarlo del lifespan se cancela solo cuando la app se apaga.
+        scheduler = asyncio.create_task(runner(client, store), name="scheduler")
+        try:
+            yield
+        finally:
+            scheduler.cancel()
+            # Se espera la cancelacion para que el loop no quede a mitad de un job
+            # mientras el AsyncClient de httpx ya se esta cerrando.
+            await asyncio.gather(scheduler, return_exceptions=True)
+            store.close()
 
 
 app = FastAPI(

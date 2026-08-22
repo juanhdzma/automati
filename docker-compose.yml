@@ -12,6 +12,10 @@ services:
     environment:
       HA_URL: ${HA_URL}
       HOME_TOKEN: ${HOME_TOKEN}
+      DB_PATH: /data/automati.db
+
+    volumes:
+      - automati-data:/data
 
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -20,4 +24,9 @@ services:
       retries: 3
       start_period: 10s
 
-# Sin volumenes: el servicio no guarda estado. Todo vive en Home Assistant.
+volumes:
+  # Con `name` explicito: sin el, compose antepone el nombre del stack y renombrar
+  # el stack crearia un volumen nuevo y vacio. Los jobs programados desaparecerian
+  # en silencio y el healthcheck seguiria en verde.
+  automati-data:
+    name: automati_data

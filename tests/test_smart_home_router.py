@@ -10,9 +10,10 @@ from conftest import FakeClient
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
     monkeypatch.setenv("HA_URL", "http://smart-home.test:8123")
     monkeypatch.setenv("HOME_TOKEN", "test-token")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "timers.db"))
     app.dependency_overrides[get_ha_client] = lambda: FakeClient(["off"])
     with TestClient(app) as test_client:
         yield test_client
@@ -33,3 +34,17 @@ def test_toggle_devuelve_el_estado_nuevo(client):
 
 def test_item_desconocido_es_422(client):
     assert client.post("/smart-home/toggle", params={"item": "microondas"}).status_code == 422
+
+
+def test_timer_prende_y_devuelve_cuando_se_apaga(client):
+    resp = client.post("/smart-home/timer", params={"item": "fan", "seconds": 1800})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "on"
+    assert body["off_in_seconds"] == 1800
+
+
+def test_timer_seconds_fuera_de_rango_es_422(client):
+    assert client.post("/smart-home/timer", params={"item": "fan", "seconds": 0}).status_code == 422
+    assert client.post("/smart-home/timer", params={"item": "fan", "seconds": 99999}).status_code == 422

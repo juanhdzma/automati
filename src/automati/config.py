@@ -21,6 +21,10 @@ class Settings:
     # llamar el servicio), asi que en total responde en ~0.3s.
     request_timeout: float = 15.0
 
+    # SQLite de los jobs programados. En Docker apunta al volumen (/data); el
+    # default sirve para correrlo local sin configurar nada.
+    db_path: str = "automati.db"
+
 
 def load_settings() -> Settings:
     url = os.getenv("HA_URL")
@@ -31,4 +35,8 @@ def load_settings() -> Settings:
         raise RuntimeError(f"Faltan variables de entorno: {', '.join(missing)}")
 
     # Se normaliza la barra final para poder concatenar paths sin cuidarse despues.
-    return Settings(ha_url=url.rstrip("/"), ha_token=token)
+    return Settings(
+        ha_url=url.rstrip("/"),
+        ha_token=token,
+        db_path=os.getenv("DB_PATH", "automati.db"),
+    )

@@ -15,9 +15,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 
-# El servicio no necesita root para nada, y no escribe en disco.
-RUN useradd --create-home --uid 1000 automati
+# El servicio no necesita root. Solo escribe en /data (SQLite de los jobs), que
+# se crea y chownea aca: si el volumen lo montara Docker sin dueno, el proceso
+# non-root reventaria con "attempt to write a readonly database".
+RUN useradd --create-home --uid 1000 automati \
+    && mkdir -p /data \
+    && chown automati:automati /data
 USER automati
+
+VOLUME ["/data"]
 
 EXPOSE 8000
 

@@ -30,8 +30,6 @@ El desync que motivo todo el workaround era otra cosa: **habia cambiado el nombr
 
 Queda una leccion que si vale: **un 200 de Home Assistant no significa que el aparato haya recibido nada.** Por eso `toggle` lee el estado antes de actuar y corta si es `unavailable`, en vez de mandar el comando y asumir que llego.
 
-El codigo del reload sigue en [`availability.py`](src/automati/logic/smart_home/availability.py) y [`tuya.py`](src/automati/logic/smart_home/tuya.py), comentado en vez de borrado, hasta juntar unos dias de uso. Si el desync no reaparece, se eliminan.
-
 ## Estructura
 
 ```
@@ -44,10 +42,10 @@ src/automati/
   logic/
     smart_home/
       client.py              # transporte contra la API de Home Assistant
-      tuya.py                # recarga de la integración (el workaround)
-      availability.py        # ensure_available — el core
       devices.py             # registry: item -> entity_id
-      toggle.py              # la automatización
+      toggle.py              # prende/apaga un switch
+      schedule.py            # timer: prende ya, apaga solo despues
+      store.py               # persistencia de los timers en SQLite
 tests/
 ```
 

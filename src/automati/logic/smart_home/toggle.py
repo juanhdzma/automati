@@ -10,23 +10,15 @@ archivo copiado con un `entity_id` distinto. Aca el device es un parametro.
   3. se elige el servicio contrario al estado leido
   4. se llama `switch/turn_on` o `switch/turn_off`
 
-# Por que `ensure_available` esta comentado (2026-08-22)
+# Historial (2026-08-22)
 
-Durante mucho tiempo el paso 1 fue `ensure_available`, que recargaba la
-integracion Tuya antes de leer. La prueba contra la casa real mostro lo
-contrario de lo esperado: **con el device sano, el reload rompe el comando que
-va inmediatamente despues**. Corriendo con reload, el `turn_on` salio 200 y el
-estado nunca se movio; sin reload, el mismo comando funciono al instante.
-
-La explicacion probable es que recargar el config entry corta la sesion con la
-nube de Tuya, y el comando siguiente cae en esa ventana.
-
-El desync que motivo el reload resulto ser otra cosa: los devices se habian
-quedado sin WiFi despues de un cambio de SSID. Ningun reload podia arreglar eso,
-y de hecho no lo arreglo en ninguno de los ~10 intentos.
-
-Se deja el codigo comentado, no borrado, hasta acumular unos dias de uso. Si el
-desync no reaparece, se elimina junto con `availability.py`.
+Hubo una version que recargaba la integracion Tuya antes de leer el estado,
+pensando que los devices se desincronizaban del docker de Home Assistant.
+Probado contra la casa real, resulto contraproducente: con el device sano, ese
+reload rompia el comando que iba justo despues (200 de HA, el aparato sin
+moverse). Y el desync real que lo motivo era otra cosa: un cambio de SSID habia
+dejado los devices sin WiFi. Se elimino ese codigo (`availability.py`, `tuya.py`)
+una vez confirmado que no hacia falta.
 
 # Por que no se usa el servicio `toggle` de Home Assistant
 

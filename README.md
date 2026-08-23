@@ -27,6 +27,10 @@ No es una seccion de automatizaciones: no acciona nada, solo calcula y devuelve 
 
 `GET /scriptable-ios/payday` calcula el proximo pago: fijo el 24 de cada mes, corrido hacia atras (nunca hacia adelante) hasta el primer dia habil si el 24 cae en fin de semana o festivo colombiano. Los festivos salen de la libreria `holidays` (Ley Emiliani, sin red ni scraping) en vez de una pagina web, para que el calculo no dependa de que un sitio externo siga respondiendo o mantenga su HTML.
 
+### `scriptable/`
+
+El codigo del lado cliente que consume estos endpoints — JavaScript real de Scriptable, para copiar y pegar directo en la app. Vive fuera de `src/` porque corre en otro runtime (el de Scriptable en el iPhone), no en Automati. Un archivo por widget: `scriptable/payday.js` pega contra `/scriptable-ios/payday` y arma un widget de home screen chico con los dias que faltan.
+
 ## El detalle que importa
 
 Al principio este servicio recargaba la integracion Tuya antes de cada comando (`ensure_available`), porque los aparatos parecian desincronizarse del docker de Home Assistant: se mandaba el toggle, HA devolvia 200, y la luz no se movia.
@@ -57,6 +61,8 @@ src/automati/
     scriptable_ios/
       payday.py              # proximo pago, ajustado a dia habil
 tests/
+scriptable/
+  payday.js                  # widget de Scriptable, pegar tal cual en la app
 ```
 
 Dos reglas sostienen esto:

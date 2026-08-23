@@ -6,20 +6,87 @@ Self-hosted personal automation hub — smart home devices, scheduled actions, a
 
 ## Qué hace hoy
 
-Un endpoint que togglea la luz y el ventilador del cuarto vía Home Assistant.
-
-```
-POST /smart-home/toggle?item=light|fan
-POST /smart-home/timer?item=light|fan&seconds=N    # prende ya, apaga solo en N segundos (1-86400)
-GET  /scriptable-ios/payday                        # proximo pago y dias que faltan
-GET  /health
-```
+Togglea la luz y el ventilador del cuarto vía Home Assistant, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
 
 Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez que el servicio esta corriendo.
 
-Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
+### `POST /smart-home/toggle`
 
-`/timer` no tiene forma de cancelarse por HTTP, a proposito: apagar es idempotente, asi que si apagas el device a mano antes de tiempo, el apagado programado no cambia nada cuando llega. No hay estado que romper por dejarlo correr de mas.
+Invierte el estado de un device ya mismo.
+
+| Param  | Tipo   | Requerido | Valores       |
+| ------ | ------ | :-------: | ------------- |
+| `item` | string |     sí    | `light`, `fan` |
+
+<table>
+<tr><td>
+
+`200 OK`
+```json
+{
+  "item": "light",
+  "label": "Luz",
+  "entity_id": "switch.luz_switch_1",
+  "previous_state": "off",
+  "state": "on"
+}
+```
+
+</td><td>
+
+**Errores** — compartidos con `/timer`
+
+| Código | Cuándo |
+| ------ | ------ |
+| `422` | `item` no es `light` ni `fan` |
+| `503` | el device reporta `unavailable` |
+| `502` | Home Assistant no respondió |
+
+</td></tr>
+</table>
+
+### `POST /smart-home/timer`
+
+Prende un device ya, y lo apaga solo despues de `seconds`. Sin forma de cancelarse por HTTP, a propósito: apagar es idempotente, así que si apagás el device a mano antes de tiempo, el apagado programado no cambia nada cuando llega. No hay estado que romper por dejarlo correr de más.
+
+| Param     | Tipo   | Requerido | Valores            |
+| --------- | ------ | :-------: | ------------------- |
+| `item`    | string |     sí    | `light`, `fan`       |
+| `seconds` | int    |     sí    | `1`–`86400` (1 día máx) |
+
+`200 OK`
+```json
+{
+  "item": "fan",
+  "label": "Ventilador",
+  "entity_id": "switch.enchufe_ventilador_socket_1",
+  "state": "on",
+  "off_in_seconds": 1800
+}
+```
+
+Mismos errores que `/toggle` (`422` / `503` / `502`).
+
+### `GET /scriptable-ios/payday`
+
+Próxima fecha de pago y cuántos días faltan, ajustada a día hábil. Sin parámetros.
+
+`200 OK`
+```json
+{
+  "next_payday": "2026-08-24",
+  "days_left": 1
+}
+```
+
+### `GET /health`
+
+Healthcheck del container. Sin parámetros.
+
+`200 OK`
+```json
+{ "status": "ok" }
+```
 
 ## scriptable_ios
 

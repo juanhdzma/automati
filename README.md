@@ -80,7 +80,7 @@ docker compose up -d
 
 Ninguna tiene default: si falta alguna, el container muere en el boot en vez de fallar en el primer toggle.
 
-Docs interactivas en `http://<host>:8000/docs`.
+El compose del repo no publica ningún puerto al host ni se une a ninguna red a propósito — eso es config de infraestructura personal, no algo para hardcodear en un repo pensado como inspiración. Para llegarle hace falta sumar el container a la red interna que corresponda (via `docker-compose.override.yml`, ya en `.gitignore`, o la config del stack en Portainer). Ahí las docs interactivas quedan en `http://automati:8000/docs`.
 
 ## Tests
 
@@ -91,18 +91,18 @@ pytest tests -q
 
 ## Seguridad
 
-**Este servicio corre solo en la LAN de casa y no tiene autenticación. Es a propósito, y no se puede exponer a internet.**
+**Este servicio no tiene autenticación. Es a propósito, y depende por completo de que quien lo deploye lo una solo a una red interna, sin salida a internet.**
 
-No hay auth, ni usuarios, ni rate limiting porque no hacen falta: el único que le pega es el dueño de la red. Montar un sistema de tokens y sesiones para dos endpoints que prenden una luz sería sobreingeniería — el tipo de complejidad que después hay que mantener sin que nadie la haya pedido. Para algo local, lo simple es lo correcto.
+No hay auth, ni usuarios, ni rate limiting porque no hacen falta si el acceso queda limitado a la red interna. Montar un sistema de tokens y sesiones para dos endpoints que prenden una luz sería sobreingeniería — el tipo de complejidad que después hay que mantener sin que nadie la haya pedido. Para algo local, lo simple es lo correcto.
 
-La contrapartida es real y hay que tenerla presente: **detrás de este servicio está el token de Home Assistant**, que da control total sobre la casa. Cualquiera que alcance el puerto 8000 puede usarlo. Por eso:
+La contrapartida es real y hay que tenerla presente: **detrás de este servicio está el token de Home Assistant**, que da control total sobre la casa. Cualquiera que alcance el container puede usarlo. Por eso:
 
-- El puerto **no se abre en el router**. Nada de port forwarding, nada de DMZ.
+- El compose del repo **no publica ningún puerto ni define ninguna red** — es responsabilidad de quien deploye sumarlo solo a una red que no tenga ingreso público.
 - El `.env` con el `HOME_TOKEN` **nunca entra al repo** (está en `.gitignore`).
-- Si algún día hace falta llegar desde afuera, la respuesta es una **VPN** (Tailscale, WireGuard), no abrir el puerto. La VPN resuelve el acceso remoto sin obligar a construir auth acá adentro.
-- La conexión con Home Assistant es **HTTP plano** (`http://smart-home.co:8123`), así que el `HOME_TOKEN` viaja sin cifrar por la LAN. Es aceptable en una red doméstica y no justifica montar TLS interno, pero deja de serlo en cualquier red compartida o con invitados.
+- Si algún día hace falta llegar desde afuera de la LAN, la respuesta es una **VPN** (Tailscale, WireGuard), no exponer el container. La VPN resuelve el acceso remoto sin obligar a construir auth acá adentro.
+- La conexión con Home Assistant es **HTTP plano**, así que el `HOME_TOKEN` viaja sin cifrar por la LAN. Es aceptable en una red doméstica y no justifica montar TLS interno, pero deja de serlo en cualquier red compartida o con invitados.
 
-Si esto se expusiera, la decisión de no tener auth deja de ser razonable y pasa a ser un agujero. La simplicidad de acá depende de que se quede en la LAN.
+Si la red a la que se una este container alguna vez tuviera salida a internet, la decisión de no tener auth deja de ser razonable y pasa a ser un agujero. La simplicidad de acá depende enteramente de que se quede interna.
 
 ## Deploy
 

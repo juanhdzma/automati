@@ -3,19 +3,12 @@ services:
     image: ghcr.io/juanhdzma/automati:latest
     container_name: automati
     restart: unless-stopped
-
-    # Solo LAN: no hay auth y detras esta el token de Home Assistant.
-    # Este puerto no se abre en el router. Ver "Seguridad" en el README.
-    ports:
-      - "8000:8000"
-
     environment:
       HA_URL: ${HA_URL}
       HOME_TOKEN: ${HOME_TOKEN}
       DB_PATH: /data/automati.db
-
     volumes:
-      - automati-data:/data
+      - db:/data
 
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -25,8 +18,4 @@ services:
       start_period: 10s
 
 volumes:
-  # Con `name` explicito: sin el, compose antepone el nombre del stack y renombrar
-  # el stack crearia un volumen nuevo y vacio. Los jobs programados desaparecerian
-  # en silencio y el healthcheck seguiria en verde.
-  automati-data:
-    name: automati_data
+  db:

@@ -1,4 +1,4 @@
-"""Prende o apaga un switch de la casa segun el estado en que este.
+"""Cambia el estado de un device de la casa segun el estado en que este.
 
 Reemplaza `light.py` y `fan.py` de los scripts originales, que eran el mismo
 archivo copiado con un `entity_id` distinto. Aca el device es un parametro.
@@ -8,7 +8,7 @@ archivo copiado con un `entity_id` distinto. Aca el device es un parametro.
   1. se lee el estado actual del device
   2. si es `unavailable`, se corta: mandar el comando seria tirarlo al vacio
   3. se elige el servicio contrario al estado leido
-  4. se llama `switch/turn_on` o `switch/turn_off`
+  4. se llama al servicio inverso del dominio correspondiente
 
 # Historial (2026-08-22)
 
@@ -37,7 +37,10 @@ from .devices import Device
 
 logger = logging.getLogger(__name__)
 
-SWITCH_DOMAIN = "switch"
+DOMAIN_ACTIONS = {
+    "switch": ("on", "turn_on", "off", "turn_off"),
+    "cover": ("open", "open_cover", "closed", "close_cover"),
+}
 
 # Home Assistant usa `unavailable` cuando la entidad no responde. Tratamos la
 # ausencia de estado (None) igual: en ninguno de los dos casos se puede actuar.
@@ -84,19 +87,22 @@ async def set_power(
 ) -> ToggleResult:
     """Prende o apaga sin importar como estaba. Idempotente."""
     previous = await read_state(client, device)
-    service = "turn_on" if on else "turn_off"
+    active_state, activate_service, inactive_state, deactivate_service = DOMAIN_ACTIONS[
+        device.domain
+    ]
+    service = activate_service if on else deactivate_service
     await client.call_service(
-        SWITCH_DOMAIN, service, {"entity_id": device.entity_id}
+        device.domain, service, {"entity_id": device.entity_id}
     )
 
     result = ToggleResult(
         entity_id=device.entity_id,
         label=device.label,
         previous_state=previous,
-        state="on" if on else "off",
+        state=active_state if on else inactive_state,
     )
     logger.info(
-        "Switch aplicado",
+        "Device aplicado",
         extra={
             "entity_id": result.entity_id,
             "service": service,
@@ -108,7 +114,6 @@ async def set_power(
 
 
 async def toggle(client: HomeAssistantClient, device: Device) -> ToggleResult:
-    # Cualquier estado que no sea "on" se trata como apagado. HA puede devolver
-    # otros valores en el medio de una transicion; ante la duda, prender.
     state = await read_state(client, device)
-    return await set_power(client, device, on=state != "on")
+    active_state, _, _, _ = DOMAIN_ACTIONS[device.domain]
+    return await set_power(client, device, on=state != active_state)

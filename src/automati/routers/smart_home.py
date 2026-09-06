@@ -39,6 +39,12 @@ class Item(str, Enum):
 
     light = "light"
     fan = "fan"
+    curtain = "curtain"
+
+
+class TimerItem(str, Enum):
+    light = "light"
+    fan = "fan"
 
 
 @router.post("/toggle")
@@ -71,7 +77,7 @@ async def toggle_item(
 
 @router.post("/timer")
 async def timer_item(
-    item: Item,
+    item: TimerItem,
     seconds: int = Query(gt=0, le=86400, description="Cuanto tiempo queda prendido"),
     client: HomeAssistantClient = Depends(get_ha_client),
     store: TimerStore = Depends(get_timer_store),

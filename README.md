@@ -6,7 +6,7 @@ Self-hosted personal automation hub — smart home devices, scheduled actions, a
 
 ## Qué hace hoy
 
-Togglea la luz y el ventilador del cuarto vía Home Assistant, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
+Togglea la luz, el ventilador y la cortina del cuarto vía Home Assistant, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
 
 Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez que el servicio esta corriendo.
 
@@ -16,7 +16,7 @@ Invierte el estado de un device ya mismo.
 
 | Param  | Tipo   | Requerido | Valores       |
 | ------ | ------ | :-------: | ------------- |
-| `item` | string |     sí    | `light`, `fan` |
+| `item` | string |     sí    | `light`, `fan`, `curtain` |
 
 <table>
 <tr><td>
@@ -38,7 +38,7 @@ Invierte el estado de un device ya mismo.
 
 | Código | Cuándo |
 | ------ | ------ |
-| `422` | `item` no es `light` ni `fan` |
+| `422` | `item` no es `light`, `fan` ni `curtain` |
 | `503` | el device reporta `unavailable` |
 | `502` | Home Assistant no respondió |
 

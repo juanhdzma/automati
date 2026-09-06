@@ -11,12 +11,6 @@ Se ve en Home Assistant, en Developer Tools > States, o pegandole a
 nombro la app cuando se emparejaron los aparatos. No conviene renombrarlos: si se
 cambian en HA, hay que cambiarlos aca tambien.
 
-# Alcance
-
-Solo entidades del dominio `switch` por ahora, que son las que togglean con
-turn_on/turn_off. La cortina es un `cover` y no funciona asi (se maneja invirtiendo
-su posicion), asi que cuando entre va a necesitar su propio handler y este registry
-va a tener que llevar tambien el dominio de cada entidad.
 """
 
 from dataclasses import dataclass
@@ -26,9 +20,19 @@ from dataclasses import dataclass
 class Device:
     entity_id: str  # id de la entidad en Home Assistant
     label: str  # nombre lindo, solo para logs y para la respuesta de la API
+    domain: str
 
 
 DEVICES: dict[str, Device] = {
-    "light": Device(entity_id="switch.luz_switch_1", label="Luz"),
-    "fan": Device(entity_id="switch.enchufe_ventilador_socket_1", label="Ventilador"),
+    "light": Device(entity_id="switch.luz_switch_1", label="Luz", domain="switch"),
+    "fan": Device(
+        entity_id="switch.enchufe_ventilador_socket_1",
+        label="Ventilador",
+        domain="switch",
+    ),
+    "curtain": Device(
+        entity_id="cover.wifi_curtain_motor_curtain",
+        label="Cortina",
+        domain="cover",
+    ),
 }

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-import httpx
+import httpx2
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     settings = load_settings()
     store = TimerStore(settings.db_path)
 
-    async with httpx.AsyncClient(
+    async with httpx2.AsyncClient(
         base_url=settings.ha_url,
         headers={"Authorization": f"Bearer {settings.ha_token}"},
         timeout=15.0,
@@ -58,8 +58,8 @@ async def device_unavailable(request: Request, exc: DeviceUnavailable) -> JSONRe
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
-@app.exception_handler(httpx.HTTPError)
-async def home_assistant_error(request: Request, exc: httpx.HTTPError) -> JSONResponse:
+@app.exception_handler(httpx2.HTTPError)
+async def home_assistant_error(request: Request, exc: httpx2.HTTPError) -> JSONResponse:
     return JSONResponse(
         status_code=502, content={"detail": f"Home Assistant no respondio: {exc}"}
     )

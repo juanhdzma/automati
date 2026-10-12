@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 import pytest
 
 from automati.logic.smart_home.devices import DEVICES
@@ -10,7 +10,7 @@ from conftest import FakeClient
 
 class DownClient:
     async def get_state(self, entity_id: str) -> dict:
-        raise httpx.ConnectError("boom")
+        raise httpx2.ConnectError("boom")
 
 
 def test_toggle_devuelve_el_estado_nuevo(client):

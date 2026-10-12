@@ -1,10 +1,10 @@
 from typing import Any
 
-import httpx
+import httpx2
 
 
 class HomeAssistantClient:
-    def __init__(self, http: httpx.AsyncClient) -> None:
+    def __init__(self, http: httpx2.AsyncClient) -> None:
         self._http = http
 
     async def get_state(self, entity_id: str) -> dict[str, Any]:

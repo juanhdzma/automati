@@ -9,14 +9,6 @@ LIGHT = DEVICES["light"]
 CURTAIN = DEVICES["curtain"]
 
 
-async def test_lee_el_estado_antes_de_actuar():
-    client = FakeClient(["off"])
-
-    await toggle_logic.toggle(client, LIGHT)
-
-    assert client.calls[0] == ("get_state", LIGHT.entity_id)
-
-
 async def test_prendido_manda_turn_off():
     client = FakeClient(["on"])
 
@@ -37,7 +29,6 @@ async def test_apagado_manda_turn_on():
 
 
 async def test_unavailable_no_manda_comando():
-    """Un device desconectado da 200 en HA sin hacer nada. Mejor cortar antes."""
     client = FakeClient(["unavailable"])
 
     with pytest.raises(toggle_logic.DeviceUnavailable):

@@ -1,9 +1,3 @@
-"""Tests del store de timers.
-
-Lo que importa acá es que un timer pendiente sobreviva a que el proceso se
-muera, que es la razón por la que existe SQLite en vez de un dict en memoria.
-"""
-
 import time
 
 from automati.logic.smart_home.store import TimerStore

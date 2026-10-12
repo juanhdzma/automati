@@ -1,10 +1,9 @@
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 
-from automati.dependencies import get_ha_client
 from automati.logic.smart_home.devices import DEVICES
 from automati.main import app
+from automati.routers.smart_home import get_ha_client
 
 from conftest import FakeClient
 
@@ -12,17 +11,6 @@ from conftest import FakeClient
 class DownClient:
     async def get_state(self, entity_id: str) -> dict:
         raise httpx.ConnectError("boom")
-
-
-@pytest.fixture
-def client(monkeypatch, tmp_path):
-    monkeypatch.setenv("HA_URL", "http://smart-home.test:8123")
-    monkeypatch.setenv("HOME_TOKEN", "test-token")
-    monkeypatch.setenv("DB_PATH", str(tmp_path / "timers.db"))
-    app.dependency_overrides[get_ha_client] = lambda: FakeClient(["off"])
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def test_toggle_devuelve_el_estado_nuevo(client):

@@ -5,7 +5,7 @@ import time
 from .client import HomeAssistantClient
 from .devices import DEVICES
 from .store import TimerStore
-from .toggle import DeviceUnavailable, ToggleResult, set_power
+from .toggle import ToggleResult, set_power
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,6 @@ async def run_due(client: HomeAssistantClient, store: TimerStore, now: float) ->
         # No se reintenta: no se sabe si el comando anterior llego al device.
         try:
             await set_power(client, device, on=False)
-        except DeviceUnavailable as exc:
-            logger.error("Timer fallo: device desconectado", extra={"timer_id": timer.id})
-            store.mark(timer.id, "failed", str(exc))
         except Exception as exc:
             logger.exception("Timer fallo", extra={"timer_id": timer.id})
             store.mark(timer.id, "failed", f"{type(exc).__name__}: {exc}")
@@ -57,8 +54,6 @@ async def runner(client: HomeAssistantClient, store: TimerStore) -> None:
     while True:
         try:
             await run_due(client, store, time.time())
-        except asyncio.CancelledError:
-            raise
         except Exception:
             # Si el loop muere, los apagados pendientes quedan colgados en silencio.
             logger.exception("Error en el loop del scheduler")

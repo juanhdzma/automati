@@ -1,12 +1,10 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 
 from .config import load_settings
 from .logic.smart_home.client import HomeAssistantClient
@@ -14,8 +12,6 @@ from .logic.smart_home.schedule import runner
 from .logic.smart_home.store import TimerStore
 from .logic.smart_home.toggle import DeviceUnavailable
 from .routers import scriptable_ios, smart_home
-
-FAVICON_PATH = Path(__file__).parent / "static" / "favicon.svg"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,7 +47,6 @@ app = FastAPI(
     title="Automati",
     description="Automatizaciones personales. Solo LAN, sin auth.",
     lifespan=lifespan,
-    docs_url=None,  # se redefine mas abajo solo para pisarle el favicon default
 )
 
 app.include_router(smart_home.router)
@@ -74,17 +69,3 @@ async def home_assistant_error(request: Request, exc: httpx.HTTPError) -> JSONRe
 async def health() -> dict[str, str]:
     """Healthcheck del container. No toca Home Assistant a proposito."""
     return {"status": "ok"}
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon() -> FileResponse:
-    return FileResponse(FAVICON_PATH, media_type="image/svg+xml")
-
-
-@app.get("/docs", include_in_schema=False)
-async def swagger_ui():
-    return get_swagger_ui_html(
-        openapi_url=app.openapi_url,
-        title=f"{app.title} - docs",
-        swagger_favicon_url="/favicon.ico",
-    )

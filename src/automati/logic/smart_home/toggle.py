@@ -17,7 +17,6 @@ UNAVAILABLE_STATES = frozenset({"unavailable", None})
 class DeviceUnavailable(Exception):
     def __init__(self, entity_id: str) -> None:
         super().__init__(f"'{entity_id}' sigue unavailable")
-        self.entity_id = entity_id
 
 
 @dataclass(frozen=True)

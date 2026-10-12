@@ -31,12 +31,9 @@ def next_payday(today: date | None = None) -> date:
     if candidate >= today:
         return candidate
 
-    next_month = today.month + 1
-    next_year = today.year
-    if next_month > 12:
-        next_month = 1
-        next_year += 1
-    return _adjusted_payday(next_year, next_month, co_holidays)
+    return _adjusted_payday(
+        today.year + today.month // 12, today.month % 12 + 1, co_holidays
+    )
 
 
 def days_left(today: date | None = None) -> dict:

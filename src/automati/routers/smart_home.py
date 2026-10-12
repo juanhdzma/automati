@@ -1,8 +1,7 @@
 from enum import Enum
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
-from ..dependencies import get_ha_client, get_timer_store
 from ..logic.smart_home import toggle as toggle_logic
 from ..logic.smart_home.client import HomeAssistantClient
 from ..logic.smart_home.devices import DEVICES
@@ -15,6 +14,14 @@ Item = Enum("Item", {k: k for k in DEVICES}, type=str)
 TimerItem = Enum(
     "TimerItem", {k: k for k, d in DEVICES.items() if d.domain == "switch"}, type=str
 )
+
+
+def get_ha_client(request: Request) -> HomeAssistantClient:
+    return request.app.state.ha_client
+
+
+def get_timer_store(request: Request) -> TimerStore:
+    return request.app.state.timer_store
 
 
 @router.post("/toggle")
@@ -43,13 +50,12 @@ async def timer_item(
     store: TimerStore = Depends(get_timer_store),
 ) -> dict[str, str | int]:
     """Prende un device y lo apaga solo despues: `POST /smart-home/timer?item=fan&seconds=1800`."""
-    device = DEVICES[item.value]
     result = await start_timer(client, store, item.value, seconds)
 
     return {
         "item": item.value,
         "label": result.label,
-        "entity_id": device.entity_id,
+        "entity_id": result.entity_id,
         "state": result.state,
         "off_in_seconds": seconds,
     }

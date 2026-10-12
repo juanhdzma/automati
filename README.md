@@ -114,7 +114,6 @@ Queda una leccion que si vale: **un 200 de Home Assistant no significa que el ap
 src/automati/
   main.py                    # crea la app, monta los routers
   config.py                  # settings desde el entorno
-  dependencies.py
   routers/
     smart_home.py            # HTTP: valida, formatea, mapea errores
     scriptable_ios.py        # HTTP: datos de solo lectura para widgets
@@ -136,8 +135,6 @@ Dos reglas sostienen esto:
 
 - **Los routers no hablan con Home Assistant ni calculan nada.** Validan, llaman a `logic/`, formatean. Toda la lógica vive de un solo lado.
 - **`logic/` se parte por sección.** `smart_home/` automatiza, `scriptable_ios/` informa — no todo lo que hay aca es una automatizacion, y el nombre de la carpeta lo dice. Una seccion nueva entra al lado, con su router, sin tocar nada de lo existente.
-
-Cada módulo de `logic/` arranca con un docstring que explica qué automatiza y por qué hace lo que hace. El porqué de los workarounds no se deduce del código y se pierde si no está escrito.
 
 ## Correr
 
@@ -183,4 +180,4 @@ Imagen en `ghcr.io/juanhdzma/automati`, construida y publicada por GitHub Action
 
 ## License
 
-GPL — ver [LICENSE](LICENSE).
+AGPL-3.0 — ver [LICENSE](LICENSE).

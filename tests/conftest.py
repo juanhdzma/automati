@@ -1,12 +1,4 @@
 class FakeClient:
-    """Doble del HomeAssistantClient que registra la secuencia de llamadas.
-
-    `states` es la cola de estados que devuelve `get_state`; el ultimo se repite.
-    `calls` guarda la secuencia real de operaciones, que es lo que se assertea:
-    que se lea el estado antes de actuar, y que a un device desconectado no se le
-    mande nada.
-    """
-
     def __init__(self, states: list[str | None]):
         self._states = list(states)
         self.calls: list[tuple] = []

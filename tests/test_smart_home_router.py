@@ -1,12 +1,17 @@
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from automati.dependencies import get_ha_client
 from automati.logic.smart_home.devices import DEVICES
 from automati.main import app
-from automati.routers.smart_home import Item, TimerItem
 
 from conftest import FakeClient
+
+
+class DownClient:
+    async def get_state(self, entity_id: str) -> dict:
+        raise httpx.ConnectError("boom")
 
 
 @pytest.fixture
@@ -18,11 +23,6 @@ def client(monkeypatch, tmp_path):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-
-
-def test_items_del_router_coinciden_con_el_registry():
-    assert {item.value for item in Item} == set(DEVICES)
-    assert {item.value for item in TimerItem} == {"light", "fan"}
 
 
 def test_toggle_devuelve_el_estado_nuevo(client):
@@ -57,3 +57,28 @@ def test_timer_prende_y_devuelve_cuando_se_apaga(client):
 def test_timer_seconds_fuera_de_rango_es_422(client):
     assert client.post("/smart-home/timer", params={"item": "fan", "seconds": 0}).status_code == 422
     assert client.post("/smart-home/timer", params={"item": "fan", "seconds": 99999}).status_code == 422
+
+
+def test_timer_solo_acepta_switches(client):
+    assert client.post("/smart-home/timer", params={"item": "curtain", "seconds": 60}).status_code == 422
+    assert client.post("/smart-home/timer", params={"item": "light", "seconds": 60}).status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/smart-home/toggle", "/smart-home/timer"])
+def test_device_unavailable_es_503(client, path):
+    app.dependency_overrides[get_ha_client] = lambda: FakeClient(["unavailable"])
+
+    resp = client.post(path, params={"item": "fan", "seconds": 60})
+
+    assert resp.status_code == 503
+    assert resp.json() == {"detail": f"'{DEVICES['fan'].entity_id}' sigue unavailable"}
+
+
+@pytest.mark.parametrize("path", ["/smart-home/toggle", "/smart-home/timer"])
+def test_home_assistant_caido_es_502(client, path):
+    app.dependency_overrides[get_ha_client] = lambda: DownClient()
+
+    resp = client.post(path, params={"item": "fan", "seconds": 60})
+
+    assert resp.status_code == 502
+    assert resp.json() == {"detail": "Home Assistant no respondio: boom"}

@@ -6,7 +6,6 @@ services:
     environment:
       HA_URL: ${HA_URL}
       HOME_TOKEN: ${HOME_TOKEN}
-      DB_PATH: /data/automati.db
     volumes:
       - db:/data
 

@@ -59,3 +59,14 @@ async def test_cortina_invierte_entre_abierta_y_cerrada(
 
     assert ("call_service", "cover", service, CURTAIN.entity_id) in client.calls
     assert result.state == result_state
+
+
+async def test_toggle_lee_una_vez_y_manda_un_comando():
+    client = FakeClient(["off"])
+
+    await toggle_logic.toggle(client, LIGHT)
+
+    assert client.calls == [
+        ("get_state", LIGHT.entity_id),
+        ("call_service", "switch", "turn_on", LIGHT.entity_id),
+    ]

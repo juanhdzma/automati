@@ -1,9 +1,3 @@
-"""Test HTTP del endpoint de payday.
-
-No necesita mockear nada: el calculo es local, sin red ni Home Assistant de
-por medio, asi que alcanza con pegarle al endpoint real.
-"""
-
 import re
 
 import pytest

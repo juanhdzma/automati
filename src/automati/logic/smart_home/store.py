@@ -1,33 +1,3 @@
-"""Persistencia de los apagados diferidos, en SQLite.
-
-# Que guarda
-
-Un solo tipo de fila: "apagar `item` en el momento `run_at`". El servicio prende
-el device al toque, en el mismo request, y guarda aca solo la parte que hay que
-recordar despues: el apagado.
-
-# Por que se persiste
-
-La imagen se redeploya seguido desde Portainer con `:latest`, asi que el container
-se recrea a menudo. Sin esto, un timer en memoria se perderia en cada redeploy y
-el ventilador se quedaria prendido indefinidamente — sin un solo error en ningun
-log. Ese modo de fallar en silencio es el que hay que evitar.
-
-Al arrancar, el servicio relee los pendientes de esta tabla y sigue donde quedo.
-
-# Por que no hace falta poder cancelar ni listar por HTTP
-
-Apagar es idempotente: si alguien apago el device a mano antes de que venza el
-timer, cuando venza el `turn_off` no cambia nada. No hay estado que "romper" por
-dejar un timer vivo, asi que no hace falta poder cancelarlo desde afuera.
-
-# Por que SQLite y no algo mas
-
-Son unas pocas filas y un solo proceso escribiendo. `sqlite3` viene en la stdlib
-y no agrega dependencias. Postgres o Redis para esto serian una VM entera para
-guardar un puñado de apagados pendientes.
-"""
-
 import logging
 import sqlite3
 import time
@@ -92,10 +62,10 @@ class TimerStore:
         ).fetchall()
         return [Timer(**dict(r)) for r in rows]
 
-    def due(self, now: float | None = None) -> list[Timer]:
+    def due(self, now: float) -> list[Timer]:
         rows = self._db.execute(
             "SELECT * FROM timers WHERE status = 'pending' AND run_at <= ? ORDER BY run_at",
-            (now if now is not None else time.time(),),
+            (now,),
         ).fetchall()
         return [Timer(**dict(r)) for r in rows]
 

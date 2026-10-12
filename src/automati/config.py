@@ -1,32 +1,12 @@
-"""Configuracion del servicio, leida del entorno.
-
-Ninguna variable tiene default y no hay archivo de config en el repo. El token de
-Home Assistant da control total sobre la casa, asi que nunca se commitea: vive como
-variable de entorno del stack en Portainer.
-
-Si falta alguna, el servicio no arranca. Es preferible que el container muera en el
-boot, donde se ve en los logs, y no que falle el primer toggle de la noche.
-"""
-
 import os
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Settings:
-    ha_url: str  # base de Home Assistant, ej. http://smart-home.co:8123
-    ha_token: str  # long-lived access token, se genera en el perfil de HA
-
-    # Timeout por request individual contra HA. Un toggle hace dos (leer estado y
-    # llamar el servicio), asi que en total responde en ~0.3s.
-    request_timeout: float = 15.0
-
-    # SQLite de los timers. El default apunta al volumen montado en el Dockerfile
-    # (/data, chowneado al usuario non-root del container) para que el container
-    # arranque solo con HA_URL y HOME_TOKEN, sin depender de que docker-compose.yml
-    # tambien recuerde setear DB_PATH. Corriendo local (no Docker) hay que pasar
-    # DB_PATH explicito porque /data no existe fuera del container.
-    db_path: str = "/data/automati.db"
+    ha_url: str
+    ha_token: str
+    db_path: str
 
 
 def load_settings() -> Settings:
@@ -37,7 +17,6 @@ def load_settings() -> Settings:
     if missing:
         raise RuntimeError(f"Faltan variables de entorno: {', '.join(missing)}")
 
-    # Se normaliza la barra final para poder concatenar paths sin cuidarse despues.
     return Settings(
         ha_url=url.rstrip("/"),
         ha_token=token,

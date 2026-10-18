@@ -6,6 +6,8 @@ services:
     environment:
       HA_URL: ${HA_URL}
       HOME_TOKEN: ${HOME_TOKEN}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     volumes:
       - db:/data
 

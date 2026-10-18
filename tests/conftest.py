@@ -24,6 +24,8 @@ class FakeClient:
 def client(monkeypatch, tmp_path):
     monkeypatch.setenv("HA_URL", "http://smart-home.test:8123")
     monkeypatch.setenv("HOME_TOKEN", "test-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:test-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "timers.db"))
     app.dependency_overrides[get_ha_client] = lambda: FakeClient(["off"])
     with TestClient(app) as test_client:

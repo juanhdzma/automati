@@ -79,6 +79,26 @@ Próxima fecha de pago y cuántos días faltan, ajustada a día hábil. Sin par�
 }
 ```
 
+### `POST /telegram/message`
+
+Manda un mensaje de texto a un chat fijo de Telegram. El chat sale de `TELEGRAM_CHAT_ID`, no del request: como el servicio no tiene auth, un `chat_id` por parámetro dejaría usar el bot contra cualquier chat.
+
+Body JSON:
+
+| Campo  | Tipo   | Requerido | Valores |
+| ------ | ------ | :-------: | ------- |
+| `text` | string |     sí    | `1`–`4096` caracteres |
+
+`200 OK`
+```json
+{ "message_id": 7 }
+```
+
+| Código | Cuándo |
+| ------ | ------ |
+| `422` | `text` vacío o de más de 4096 caracteres |
+| `502` | Telegram no respondió o rechazó el mensaje |
+
 ### `GET /health`
 
 Healthcheck del container. Sin parámetros.
@@ -117,6 +137,7 @@ src/automati/
   routers/
     smart_home.py            # HTTP: valida, formatea, mapea errores
     scriptable_ios.py        # HTTP: datos de solo lectura para widgets
+    telegram.py              # HTTP: manda un mensaje al chat configurado
   logic/
     smart_home/
       client.py              # transporte contra la API de Home Assistant
@@ -126,6 +147,8 @@ src/automati/
       store.py               # persistencia de los timers en SQLite
     scriptable_ios/
       payday.py              # proximo pago, ajustado a dia habil
+    telegram/
+      client.py              # sendMessage contra la Bot API
 tests/
 scriptable/
   payday.js                  # widget de Scriptable, pegar tal cual en la app
@@ -147,6 +170,8 @@ docker compose up -d
 |---|---|
 | `HA_URL` | Base de Home Assistant, ej. `http://smart-home.co:8123` |
 | `HOME_TOKEN` | Long-lived access token de HA (perfil → Long-lived access tokens) |
+| `TELEGRAM_BOT_TOKEN` | Token del bot, lo da @BotFather |
+| `TELEGRAM_CHAT_ID` | Chat que recibe los mensajes; tiene que haberle mandado `/start` al bot |
 
 Ninguna tiene default: si falta alguna, el container muere en el boot en vez de fallar en el primer toggle.
 

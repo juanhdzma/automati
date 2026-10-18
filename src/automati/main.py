@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .config import load_settings
-from .logic.smart_home.client import HomeAssistantClient
+from .logic.smart_home.client import TuyaClient
 from .logic.smart_home.schedule import runner
 from .logic.smart_home.store import TimerStore
 from .logic.smart_home.toggle import DeviceUnavailable
@@ -27,20 +27,12 @@ async def lifespan(app: FastAPI):
     settings = load_settings()
     store = TimerStore(settings.db_path)
 
-    # Telegram va en un cliente aparte: el de HA manda el HOME_TOKEN en cada request.
-    async with (
-        httpx2.AsyncClient(
-            base_url=settings.ha_url,
-            headers={"Authorization": f"Bearer {settings.ha_token}"},
-            timeout=15.0,
-        ) as http,
-        httpx2.AsyncClient(
-            base_url=f"https://api.telegram.org/bot{settings.telegram_bot_token}",
-            timeout=15.0,
-        ) as telegram_http,
-    ):
-        client = HomeAssistantClient(http)
-        app.state.ha_client = client
+    async with httpx2.AsyncClient(
+        base_url=f"https://api.telegram.org/bot{settings.telegram_bot_token}",
+        timeout=15.0,
+    ) as telegram_http:
+        client = TuyaClient(settings.tuya_keys)
+        app.state.device_client = client
         app.state.timer_store = store
         app.state.telegram_client = TelegramClient(
             telegram_http, settings.telegram_chat_id
@@ -51,7 +43,7 @@ async def lifespan(app: FastAPI):
             yield
         finally:
             scheduler.cancel()
-            # Se espera la cancelacion para que no quede un job a medias con httpx ya cerrandose.
+            # Se espera la cancelacion para que no quede un job a medias con el store ya cerrandose.
             await asyncio.gather(scheduler, return_exceptions=True)
             store.close()
 
@@ -72,13 +64,6 @@ async def device_unavailable(request: Request, exc: DeviceUnavailable) -> JSONRe
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
-@app.exception_handler(httpx2.HTTPError)
-async def home_assistant_error(request: Request, exc: httpx2.HTTPError) -> JSONResponse:
-    return JSONResponse(
-        status_code=502, content={"detail": f"Home Assistant no respondio: {exc}"}
-    )
-
-
 @app.exception_handler(TelegramError)
 async def telegram_error(request: Request, exc: TelegramError) -> JSONResponse:
     return JSONResponse(
@@ -88,5 +73,5 @@ async def telegram_error(request: Request, exc: TelegramError) -> JSONResponse:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    """Healthcheck del container. No toca Home Assistant a proposito."""
+    """Healthcheck del container. No toca devices a proposito."""
     return {"status": "ok"}

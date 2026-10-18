@@ -3,21 +3,33 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Device:
-    entity_id: str
+    dev_id: str
+    ip: str | None
+    version: float | None
+    kind: str
     label: str
-    domain: str
 
 
 DEVICES: dict[str, Device] = {
-    "light": Device(entity_id="switch.luz_switch_1", label="Luz", domain="switch"),
+    "light": Device(
+        dev_id="eb93b7f6c0ff38d8dfureh",
+        ip=None,
+        version=None,
+        kind="switch",
+        label="Luz",
+    ),
     "fan": Device(
-        entity_id="switch.enchufe_ventilador_socket_1",
+        dev_id="eb96bf610504ba299ef0ty",
+        ip="192.168.78.2",
+        version=3.5,
+        kind="switch",
         label="Ventilador",
-        domain="switch",
     ),
     "curtain": Device(
-        entity_id="cover.wifi_curtain_motor_curtain",
+        dev_id="ebc63f8e72bd985670oq9c",
+        ip="192.168.78.3",
+        version=3.4,
+        kind="cover",
         label="Cortina",
-        domain="cover",
     ),
 }

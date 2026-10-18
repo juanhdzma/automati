@@ -16,7 +16,7 @@ async def test_start_timer_prende_ya_y_guarda_el_apagado(tmp_path):
 
     result = await schedule.start_timer(client, store, "fan", seconds=1800)
 
-    assert ("call_service", "switch", "turn_on", DEVICES["fan"].entity_id) in client.calls
+    assert ("set_power", DEVICES["fan"].dev_id, True) in client.calls
     assert result.state == "on"
     assert len(store.pending()) == 1
     assert store.pending()[0].item == "fan"
@@ -28,7 +28,7 @@ async def test_run_due_apaga_un_timer_vencido(tmp_path):
 
     await schedule.run_due(client, store, now=time.time() + 30)
 
-    assert ("call_service", "switch", "turn_off", DEVICES["fan"].entity_id) in client.calls
+    assert ("set_power", DEVICES["fan"].dev_id, False) in client.calls
     assert store.pending() == []
 
 

@@ -6,7 +6,7 @@ Self-hosted personal automation hub — smart home devices, scheduled actions, a
 
 ## Qué hace hoy
 
-Togglea la luz, el ventilador y la cortina del cuarto vía Home Assistant, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un `entity_id` distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
+Togglea la luz, el ventilador y la cortina del cuarto hablando directo con los devices Tuya por la LAN, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un ID distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
 
 Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez que el servicio esta corriendo.
 
@@ -26,7 +26,6 @@ Invierte el estado de un device ya mismo.
 {
   "item": "light",
   "label": "Luz",
-  "entity_id": "switch.luz_switch_1",
   "previous_state": "off",
   "state": "on"
 }
@@ -39,8 +38,7 @@ Invierte el estado de un device ya mismo.
 | Código | Cuándo |
 | ------ | ------ |
 | `422` | `item` no es `light`, `fan` ni `curtain` |
-| `503` | el device reporta `unavailable` |
-| `502` | Home Assistant no respondió |
+| `503` | el device no responde por LAN: offline, sin IP configurada o con la key equivocada |
 
 </td></tr>
 </table>
@@ -59,13 +57,12 @@ Prende un device ya, y lo apaga solo despues de `seconds`. Sin forma de cancelar
 {
   "item": "fan",
   "label": "Ventilador",
-  "entity_id": "switch.enchufe_ventilador_socket_1",
   "state": "on",
   "off_in_seconds": 1800
 }
 ```
 
-Mismos errores que `/toggle` (`422` / `503` / `502`).
+Mismos errores que `/toggle` (`422` / `503`).
 
 ### `GET /scriptable-ios/payday`
 
@@ -120,13 +117,15 @@ El codigo del lado cliente que consume estos endpoints — JavaScript real de Sc
 
 ## El detalle que importa
 
-Al principio este servicio recargaba la integracion Tuya antes de cada comando (`ensure_available`), porque los aparatos parecian desincronizarse del docker de Home Assistant: se mandaba el toggle, HA devolvia 200, y la luz no se movia.
+automati habla con los devices por el protocolo local de Tuya (TCP 6668, cifrado AES con la local key de cada device) usando [`tinytuya`](https://github.com/jasonacox/tinytuya). No pasa por la nube y no hace falta abrir puertos. Hay tres cosas del protocolo que condicionan el código:
 
-Probandolo contra la casa real el 22/08/2026 resulto ser al reves. **El reload previo es lo que rompe el comando.** Con reload, el `turn_on` sale 200 y el estado nunca cambia; sin reload, funciona en 0.2s. La causa probable es que recargar el config entry corta la sesion con la nube de Tuya y el comando siguiente cae en esa ventana.
+- **Cada device acepta una sola conexión TCP a la vez.** `TuyaClient` abre y cierra la conexión en cada comando. Una conexión persistente bloquearía cualquier otro cliente, incluida la app Smart Life en la LAN.
+- **Un device offline no lanza excepción.** `status()` devuelve un dict con `"Error"`, y `TuyaClient` lo convierte en `DeviceUnavailable` (503). Los timeouts son cortos (3 s, un reintento) para que el 503 llegue en segundos y no después de casi un minuto, que es lo que tardan los defaults de tinytuya.
+- **La posición de la cortina (DP `3`) solo se actualiza cuando el motor termina el recorrido**, unos 25 s después. Si se hace toggle mientras se mueve, se lee la posición vieja y se repite el mismo comando. Entre dos toggles de la cortina hay que esperar a que termine.
 
-El desync que motivo todo el workaround era otra cosa: **habia cambiado el nombre de la WiFi**. Los aparatos Tuya son 2.4GHz y guardan el SSID internamente, asi que los 5 quedaron fuera de la red — la nube los reportaba `online: False` y ninguno aparecia en la LAN. Ningun reload podia arreglar eso, y no lo arreglo en ninguno de los ~10 intentos. Se resolvio re-emparejandolos.
+`toggle` lee el estado antes de actuar y corta si el device no responde, en vez de mandar el comando y asumir que llegó.
 
-Queda una leccion que si vale: **un 200 de Home Assistant no significa que el aparato haya recibido nada.** Por eso `toggle` lee el estado antes de actuar y corta si es `unavailable`, en vez de mandar el comando y asumir que llego.
+Los devices Tuya son de 2.4 GHz y guardan el SSID. Si cambia el nombre de la WiFi quedan fuera de la red y hay que re-emparejarlos, y **re-emparejar cambia la local key**: después hay que volver a sacar las keys y actualizar las env vars.
 
 ## Estructura
 
@@ -140,9 +139,9 @@ src/automati/
     telegram.py              # HTTP: manda un mensaje al chat configurado
   logic/
     smart_home/
-      client.py              # transporte contra la API de Home Assistant
-      devices.py             # registry: item -> entity_id
-      toggle.py              # prende/apaga un switch
+      client.py              # transporte local contra los devices Tuya (tinytuya)
+      devices.py             # registry: item -> dev_id, IP, versión del protocolo
+      toggle.py              # prende/apaga un switch, abre/cierra la cortina
       schedule.py            # timer: prende ya, apaga solo despues
       store.py               # persistencia de los timers en SQLite
     scriptable_ios/
@@ -156,24 +155,27 @@ scriptable/
 
 Dos reglas sostienen esto:
 
-- **Los routers no hablan con Home Assistant ni calculan nada.** Validan, llaman a `logic/`, formatean. Toda la lógica vive de un solo lado.
+- **Los routers no hablan con los devices ni calculan nada.** Validan, llaman a `logic/`, formatean. Toda la lógica vive de un solo lado.
 - **`logic/` se parte por sección.** `smart_home/` automatiza, `scriptable_ios/` informa — no todo lo que hay aca es una automatizacion, y el nombre de la carpeta lo dice. Una seccion nueva entra al lado, con su router, sin tocar nada de lo existente.
 
 ## Correr
 
 ```bash
-cp .env.example .env    # completar HOME_TOKEN
+cp .env.example .env    # completar las keys
 docker compose up -d
 ```
 
 | Variable | Qué es |
 |---|---|
-| `HA_URL` | Base de Home Assistant, ej. `http://smart-home.co:8123` |
-| `HOME_TOKEN` | Long-lived access token de HA (perfil → Long-lived access tokens) |
+| `TUYA_KEY_FAN` | Local key del ventilador |
+| `TUYA_KEY_LIGHT` | Local key de la luz |
+| `TUYA_KEY_CURTAIN` | Local key de la cortina |
 | `TELEGRAM_BOT_TOKEN` | Token del bot, lo da @BotFather |
 | `TELEGRAM_CHAT_ID` | Chat que recibe los mensajes; tiene que haberle mandado `/start` al bot |
 
 Ninguna tiene default: si falta alguna, el container muere en el boot en vez de fallar en el primer toggle.
+
+Las local keys salen de la cuenta de Smart Life con `~/tuya-keys/fetch_keys.py <user_code>`. El `user_code` está en Smart Life → Me → Settings → Account and Security → User Code. El script abre un QR que se escanea desde la app y escribe `devices-qr.json`, con el campo `key` de cada device buscado por `id`. El `dev_id`, la IP y la versión del protocolo de cada device están en `src/automati/logic/smart_home/devices.py`. Como los devices se alcanzan por IP, el container tiene que estar en una red que llegue a la LAN de la casa.
 
 El compose del repo no publica ningún puerto al host ni se une a ninguna red a propósito — eso es config de infraestructura personal, no algo para hardcodear en un repo pensado como inspiración. Para llegarle hace falta sumar el container a la red interna que corresponda (via `docker-compose.override.yml`, ya en `.gitignore`, o la config del stack en Portainer). Ahí las docs interactivas quedan en `http://automati:8000/docs`.
 
@@ -190,12 +192,12 @@ pytest tests -q
 
 No hay auth, ni usuarios, ni rate limiting porque no hacen falta si el acceso queda limitado a la red interna. Montar un sistema de tokens y sesiones para dos endpoints que prenden una luz sería sobreingeniería — el tipo de complejidad que después hay que mantener sin que nadie la haya pedido. Para algo local, lo simple es lo correcto.
 
-La contrapartida es real y hay que tenerla presente: **detrás de este servicio está el token de Home Assistant**, que da control total sobre la casa. Cualquiera que alcance el container puede usarlo. Por eso:
+La contrapartida es real y hay que tenerla presente: **detrás de este servicio están las local keys de los devices**, que permiten controlarlos desde cualquier equipo de la LAN. Cualquiera que alcance el container puede usarlo. Por eso:
 
 - El compose del repo **no publica ningún puerto ni define ninguna red** — es responsabilidad de quien deploye sumarlo solo a una red que no tenga ingreso público.
-- El `.env` con el `HOME_TOKEN` **nunca entra al repo** (está en `.gitignore`).
+- El `.env` con las keys **nunca entra al repo** (está en `.gitignore`), ni en tests ni en ejemplos.
 - Si algún día hace falta llegar desde afuera de la LAN, la respuesta es una **VPN** (Tailscale, WireGuard), no exponer el container. La VPN resuelve el acceso remoto sin obligar a construir auth acá adentro.
-- La conexión con Home Assistant es **HTTP plano**, así que el `HOME_TOKEN` viaja sin cifrar por la LAN. Es aceptable en una red doméstica y no justifica montar TLS interno, pero deja de serlo en cualquier red compartida o con invitados.
+- El tráfico con los devices va cifrado con la local key, pero cualquiera que tenga la key y esté en la LAN puede mandarles comandos. Si una key se filtra, re-emparejar el device la rota.
 
 Si la red a la que se una este container alguna vez tuviera salida a internet, la decisión de no tener auth deja de ser razonable y pasa a ser un agujero. La simplicidad de acá depende enteramente de que se quede interna.
 

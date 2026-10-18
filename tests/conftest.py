@@ -1,8 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from automati.logic.smart_home.client import DeviceUnavailable
 from automati.main import app
-from automati.routers.smart_home import get_ha_client
+from automati.routers.smart_home import get_device_client
 
 
 class FakeClient:
@@ -10,24 +11,26 @@ class FakeClient:
         self._states = list(states)
         self.calls: list[tuple] = []
 
-    async def get_state(self, entity_id: str) -> dict:
+    async def get_state(self, device) -> str:
         state = self._states.pop(0) if len(self._states) > 1 else self._states[0]
-        self.calls.append(("get_state", entity_id))
-        return {"state": state}
+        self.calls.append(("get_state", device.dev_id))
+        if state == "unavailable":
+            raise DeviceUnavailable(f"'{device.label}' no responde")
+        return state
 
-    async def call_service(self, domain: str, service: str, data: dict):
-        self.calls.append(("call_service", domain, service, data["entity_id"]))
-        return []
+    async def set_power(self, device, on: bool) -> None:
+        self.calls.append(("set_power", device.dev_id, on))
 
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):
-    monkeypatch.setenv("HA_URL", "http://smart-home.test:8123")
-    monkeypatch.setenv("HOME_TOKEN", "test-token")
+    monkeypatch.setenv("TUYA_KEY_FAN", "fake-fan-key")
+    monkeypatch.setenv("TUYA_KEY_LIGHT", "fake-light-key")
+    monkeypatch.setenv("TUYA_KEY_CURTAIN", "fake-curtain-key")
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:test-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
     monkeypatch.setenv("DB_PATH", str(tmp_path / "timers.db"))
-    app.dependency_overrides[get_ha_client] = lambda: FakeClient(["off"])
+    app.dependency_overrides[get_device_client] = lambda: FakeClient(["off"])
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

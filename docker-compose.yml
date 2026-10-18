@@ -4,8 +4,9 @@ services:
     container_name: automati
     restart: unless-stopped
     environment:
-      HA_URL: ${HA_URL}
-      HOME_TOKEN: ${HOME_TOKEN}
+      TUYA_KEY_FAN: ${TUYA_KEY_FAN}
+      TUYA_KEY_LIGHT: ${TUYA_KEY_LIGHT}
+      TUYA_KEY_CURTAIN: ${TUYA_KEY_CURTAIN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     volumes:

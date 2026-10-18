@@ -9,22 +9,22 @@ LIGHT = DEVICES["light"]
 CURTAIN = DEVICES["curtain"]
 
 
-async def test_prendido_manda_turn_off():
+async def test_prendido_lo_apaga():
     client = FakeClient(["on"])
 
     result = await toggle_logic.toggle(client, LIGHT)
 
-    assert ("call_service", "switch", "turn_off", LIGHT.entity_id) in client.calls
+    assert ("set_power", LIGHT.dev_id, False) in client.calls
     assert result.previous_state == "on"
     assert result.state == "off"
 
 
-async def test_apagado_manda_turn_on():
+async def test_apagado_lo_prende():
     client = FakeClient(["off"])
 
     result = await toggle_logic.toggle(client, LIGHT)
 
-    assert ("call_service", "switch", "turn_on", LIGHT.entity_id) in client.calls
+    assert ("set_power", LIGHT.dev_id, True) in client.calls
     assert result.state == "on"
 
 
@@ -34,21 +34,21 @@ async def test_unavailable_no_manda_comando():
     with pytest.raises(toggle_logic.DeviceUnavailable):
         await toggle_logic.toggle(client, LIGHT)
 
-    assert [c for c in client.calls if c[0] == "call_service"] == []
+    assert [c for c in client.calls if c[0] == "set_power"] == []
 
 
 @pytest.mark.parametrize(
-    ("current_state", "service", "result_state"),
-    [("open", "close_cover", "closed"), ("closed", "open_cover", "open")],
+    ("current_state", "on", "result_state"),
+    [("open", False, "closed"), ("closed", True, "open")],
 )
 async def test_cortina_invierte_entre_abierta_y_cerrada(
-    current_state, service, result_state
+    current_state, on, result_state
 ):
     client = FakeClient([current_state])
 
     result = await toggle_logic.toggle(client, CURTAIN)
 
-    assert ("call_service", "cover", service, CURTAIN.entity_id) in client.calls
+    assert ("set_power", CURTAIN.dev_id, on) in client.calls
     assert result.state == result_state
 
 
@@ -58,6 +58,6 @@ async def test_toggle_lee_una_vez_y_manda_un_comando():
     await toggle_logic.toggle(client, LIGHT)
 
     assert client.calls == [
-        ("get_state", LIGHT.entity_id),
-        ("call_service", "switch", "turn_on", LIGHT.entity_id),
+        ("get_state", LIGHT.dev_id),
+        ("set_power", LIGHT.dev_id, True),
     ]

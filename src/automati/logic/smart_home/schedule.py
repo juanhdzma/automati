@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 
-from .client import HomeAssistantClient
+from .client import TuyaClient
 from .devices import DEVICES
 from .store import TimerStore
 from .toggle import ToggleResult, set_power
@@ -14,7 +14,7 @@ MAX_LATE_SECONDS = 3600.0
 
 
 async def start_timer(
-    client: HomeAssistantClient, store: TimerStore, item: str, seconds: float
+    client: TuyaClient, store: TimerStore, item: str, seconds: float
 ) -> ToggleResult:
     device = DEVICES[item]
     result = await set_power(client, device, on=True)
@@ -22,7 +22,7 @@ async def start_timer(
     return result
 
 
-async def run_due(client: HomeAssistantClient, store: TimerStore, now: float) -> None:
+async def run_due(client: TuyaClient, store: TimerStore, now: float) -> None:
     for timer in store.due(now):
         late = now - timer.run_at
         # Tras un corte largo, apagar horas tarde no cumple ninguna intencion: se descarta.
@@ -46,7 +46,7 @@ async def run_due(client: HomeAssistantClient, store: TimerStore, now: float) ->
             store.mark(timer.id, "done")
 
 
-async def runner(client: HomeAssistantClient, store: TimerStore) -> None:
+async def runner(client: TuyaClient, store: TimerStore) -> None:
     pendientes = len(store.pending())
     if pendientes:
         logger.info("Timers pendientes recuperados del store", extra={"count": pendientes})

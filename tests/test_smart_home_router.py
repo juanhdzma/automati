@@ -1,16 +1,10 @@
-import httpx2
 import pytest
 
 from automati.logic.smart_home.devices import DEVICES
 from automati.main import app
-from automati.routers.smart_home import get_ha_client
+from automati.routers.smart_home import get_device_client
 
 from conftest import FakeClient
-
-
-class DownClient:
-    async def get_state(self, entity_id: str) -> dict:
-        raise httpx2.ConnectError("boom")
 
 
 def test_toggle_devuelve_el_estado_nuevo(client):
@@ -18,7 +12,6 @@ def test_toggle_devuelve_el_estado_nuevo(client):
 
     assert resp.status_code == 200
     assert resp.json()["state"] == "on"
-    assert resp.json()["entity_id"] == DEVICES["fan"].entity_id
 
 
 def test_toggle_cortina_devuelve_el_estado_nuevo(client):
@@ -26,7 +19,6 @@ def test_toggle_cortina_devuelve_el_estado_nuevo(client):
 
     assert resp.status_code == 200
     assert resp.json()["state"] == "open"
-    assert resp.json()["entity_id"] == DEVICES["curtain"].entity_id
 
 
 def test_item_desconocido_es_422(client):
@@ -54,19 +46,10 @@ def test_timer_solo_acepta_switches(client):
 
 @pytest.mark.parametrize("path", ["/smart-home/toggle", "/smart-home/timer"])
 def test_device_unavailable_es_503(client, path):
-    app.dependency_overrides[get_ha_client] = lambda: FakeClient(["unavailable"])
+    app.dependency_overrides[get_device_client] = lambda: FakeClient(["unavailable"])
 
     resp = client.post(path, params={"item": "fan", "seconds": 60})
 
     assert resp.status_code == 503
-    assert resp.json() == {"detail": f"'{DEVICES['fan'].entity_id}' sigue unavailable"}
+    assert resp.json() == {"detail": f"'{DEVICES['fan'].label}' no responde"}
 
-
-@pytest.mark.parametrize("path", ["/smart-home/toggle", "/smart-home/timer"])
-def test_home_assistant_caido_es_502(client, path):
-    app.dependency_overrides[get_ha_client] = lambda: DownClient()
-
-    resp = client.post(path, params={"item": "fan", "seconds": 60})
-
-    assert resp.status_code == 502
-    assert resp.json() == {"detail": "Home Assistant no respondio: boom"}

@@ -9,6 +9,7 @@ services:
       TUYA_KEY_CURTAIN: ${TUYA_KEY_CURTAIN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TV_HOST: ${TV_HOST:-}
     volumes:
       - db:/data
 

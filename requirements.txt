@@ -3,3 +3,4 @@ uvicorn==0.54.0
 httpx2==2.13.1
 holidays==0.106
 tinytuya==1.20.0
+androidtvremote2==0.3.2

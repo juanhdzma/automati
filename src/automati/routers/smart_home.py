@@ -7,10 +7,11 @@ from ..logic.smart_home.client import TuyaClient
 from ..logic.smart_home.devices import DEVICES
 from ..logic.smart_home.schedule import start_timer
 from ..logic.smart_home.store import TimerStore
+from ..logic.smart_home.tv import TvRemote
 
 router = APIRouter(prefix="/smart-home", tags=["smart-home"])
 
-Item = Enum("Item", {k: k for k in DEVICES}, type=str)
+Item = Enum("Item", {k: k for k in [*DEVICES, "tv"]}, type=str)
 TimerItem = Enum(
     "TimerItem", {k: k for k, d in DEVICES.items() if d.kind == "switch"}, type=str
 )
@@ -18,6 +19,10 @@ TimerItem = Enum(
 
 def get_device_client(request: Request) -> TuyaClient:
     return request.app.state.device_client
+
+
+def get_tv_remote(request: Request) -> TvRemote:
+    return request.app.state.tv_remote
 
 
 def get_timer_store(request: Request) -> TimerStore:
@@ -28,10 +33,13 @@ def get_timer_store(request: Request) -> TimerStore:
 async def toggle_item(
     item: Item,
     client: TuyaClient = Depends(get_device_client),
+    tv_remote: TvRemote = Depends(get_tv_remote),
 ) -> dict[str, str]:
     """Invierte el estado de un device: `POST /smart-home/toggle?item=light`."""
-    device = DEVICES[item.value]
-    result = await toggle_logic.toggle(client, device)
+    if item.value == "tv":
+        result = await tv_remote.toggle()
+    else:
+        result = await toggle_logic.toggle(client, DEVICES[item.value])
 
     return {
         "item": item.value,

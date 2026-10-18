@@ -6,7 +6,7 @@ Self-hosted personal automation hub — smart home devices, scheduled actions, a
 
 ## Qué hace hoy
 
-Togglea la luz, el ventilador y la cortina del cuarto hablando directo con los devices Tuya por la LAN, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un ID distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
+Togglea la luz, el ventilador y la cortina del cuarto hablando directo con los devices Tuya por la LAN, prende y apaga la TV con el protocolo de Android TV Remote, y le da datos a un widget de iOS. Reemplaza una carpeta de scripts sueltos donde cada aparato era un archivo copiado del anterior con un ID distinto, mas la escena `Timer Ventilador` de Tuya que estaba fija en 2 horas y solo para un device.
 
 Schema exacto, para probar a mano o integrar con algo: `/docs` (Swagger) una vez que el servicio esta corriendo.
 
@@ -16,7 +16,7 @@ Invierte el estado de un device ya mismo.
 
 | Param  | Tipo   | Requerido | Valores       |
 | ------ | ------ | :-------: | ------------- |
-| `item` | string |     sí    | `light`, `fan`, `curtain` |
+| `item` | string |     sí    | `light`, `fan`, `curtain`, `tv` |
 
 <table>
 <tr><td>
@@ -37,8 +37,8 @@ Invierte el estado de un device ya mismo.
 
 | Código | Cuándo |
 | ------ | ------ |
-| `422` | `item` no es `light`, `fan` ni `curtain` |
-| `503` | el device no responde por LAN: offline, sin IP configurada o con la key equivocada |
+| `422` | `item` no es `light`, `fan`, `curtain` ni `tv` |
+| `503` | el device no responde por LAN: offline, sin IP configurada, con la key equivocada, o la TV sin `TV_HOST` o sin emparejar |
 
 </td></tr>
 </table>
@@ -125,6 +125,8 @@ automati habla con los devices por el protocolo local de Tuya (TCP 6668, cifrado
 
 `toggle` lee el estado antes de actuar y corta si el device no responde, en vez de mandar el comando y asumir que llegó.
 
+La TV (Hisense, Google TV) va por otro lado: [`androidtvremote2`](https://github.com/tronikos/androidtvremote2), el protocolo de la app Google TV Remote (puertos 6466 y 6467). Probado contra la TV real el 18/10/2026: **un `POWER` corto no la prende desde standby, y si la conexión se cierra apenas se manda la tecla, la TV la descarta.** Por eso el toggle simula apretar y soltar (`START_LONG` + `END_LONG`) y deja la conexión abierta un segundo antes de cerrarla. Wake-on-LAN y `WAKEUP` tampoco la despiertan. El toggle tarda alrededor de 1.3 s.
+
 Los devices Tuya son de 2.4 GHz y guardan el SSID. Si cambia el nombre de la WiFi quedan fuera de la red y hay que re-emparejarlos, y **re-emparejar cambia la local key**: después hay que volver a sacar las keys y actualizar las env vars.
 
 ## Estructura
@@ -142,6 +144,7 @@ src/automati/
       client.py              # transporte local contra los devices Tuya (tinytuya)
       devices.py             # registry: item -> dev_id, IP, versión del protocolo
       toggle.py              # prende/apaga un switch, abre/cierra la cortina
+      tv.py                  # prende/apaga la TV por Android TV Remote
       schedule.py            # timer: prende ya, apaga solo despues
       store.py               # persistencia de los timers en SQLite
     scriptable_ios/
@@ -174,6 +177,14 @@ docker compose up -d
 | `TELEGRAM_CHAT_ID` | Chat que recibe los mensajes; tiene que haberle mandado `/start` al bot |
 
 Ninguna tiene default: si falta alguna, el container muere en el boot en vez de fallar en el primer toggle.
+
+`TV_HOST` (IP de la TV) es opcional: sin ella, `item=tv` responde 503. La TV se empareja una sola vez, con el container corriendo:
+
+```bash
+docker exec -it automati python -m automati.pair_tv
+```
+
+La TV muestra un código de 6 caracteres que se escribe en la consola. El cert queda en el mismo directorio que `DB_PATH` (`/data/tv-cert.pem` y `/data/tv-key.pem`), en el volumen persistente, así que sobrevive a cada redeploy. Si se pierde el volumen o la TV se resetea, hay que volver a emparejarla.
 
 Las local keys salen de la cuenta de Smart Life con `~/tuya-keys/fetch_keys.py <user_code>`. El `user_code` está en Smart Life → Me → Settings → Account and Security → User Code. El script abre un QR que se escanea desde la app y escribe `devices-qr.json`, con el campo `key` de cada device buscado por `id`. El `dev_id`, la IP y la versión del protocolo de cada device están en `src/automati/logic/smart_home/devices.py`. Como los devices se alcanzan por IP, el container tiene que estar en una red que llegue a la LAN de la casa.
 

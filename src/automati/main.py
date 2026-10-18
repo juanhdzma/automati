@@ -11,6 +11,7 @@ from .logic.smart_home.client import TuyaClient
 from .logic.smart_home.schedule import runner
 from .logic.smart_home.store import TimerStore
 from .logic.smart_home.toggle import DeviceUnavailable
+from .logic.smart_home.tv import TvRemote
 from .logic.telegram.client import TelegramClient, TelegramError
 from .routers import scriptable_ios, smart_home, telegram
 
@@ -34,6 +35,9 @@ async def lifespan(app: FastAPI):
         client = TuyaClient(settings.tuya_keys)
         app.state.device_client = client
         app.state.timer_store = store
+        app.state.tv_remote = TvRemote(
+            settings.tv_host, settings.tv_certfile, settings.tv_keyfile
+        )
         app.state.telegram_client = TelegramClient(
             telegram_http, settings.telegram_chat_id
         )

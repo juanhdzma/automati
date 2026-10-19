@@ -12,9 +12,9 @@ class Device:
 
 DEVICES: dict[str, Device] = {
     "light": Device(
-        dev_id="eb93b7f6c0ff38d8dfureh",
-        ip=None,
-        version=None,
+        dev_id="eb4662df2d5ce92267nfgi",
+        ip="192.168.78.16",
+        version=3.4,
         kind="switch",
         label="Luz",
     ),

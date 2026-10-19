@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from automati.logic.smart_home import client as client_module
@@ -68,7 +70,7 @@ async def test_dict_con_error_es_device_unavailable(outlet):
 
 async def test_device_sin_ip_no_intenta_conectar(outlet):
     with pytest.raises(DeviceUnavailable):
-        await TuyaClient(KEYS).get_state(DEVICES["light"])
+        await TuyaClient(KEYS).get_state(replace(DEVICES["light"], ip=None))
     assert outlet.instances == []
 
 

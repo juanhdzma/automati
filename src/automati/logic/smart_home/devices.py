@@ -13,7 +13,7 @@ class Device:
 DEVICES: dict[str, Device] = {
     "light": Device(
         dev_id="eb4662df2d5ce92267nfgi",
-        ip="192.168.78.16",
+        ip="192.168.78.4",
         version=3.4,
         kind="switch",
         label="Luz",
